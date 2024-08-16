@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Interface</title>
+</head>
+<body>
+    <h1>Welcome to the Chatbot</h1>
+    <input id="user-input" type="text" placeholder="Type a message...">
+    <button id="send-button">Send</button>
+    <div id="message-container"></div>
+
+    <script>
+        document.getElementById('send-button').addEventListener('click', function() {
+            const userInput = document.getElementById('user-input').value.trim();
+            if (userInput === '') return;
+
+            document.getElementById('user-input').value = '';
+
+            fetch('/api/home', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userInput }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                const messageContainer = document.getElementById('message-container');
+
+                const userMessage = document.createElement('div');
+                userMessage.textContent = `User: ${userInput}`;
+                messageContainer.appendChild(userMessage);
+
+                const botMessage = document.createElement('div');
+                botMessage.textContent = `Bot: ${data.response}`;
+                messageContainer.appendChild(botMessage);
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+        });
+    </script>
+</body>
+</html>

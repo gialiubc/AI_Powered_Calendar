@@ -7,9 +7,12 @@
 </head>
 <body>
     <h1>Welcome to the Chatbot</h1>
-    <input id="user-input" type="text" placeholder="Type a message...">
-    <button id="send-button">Send</button>
-    <div id="message-container"></div>
+    <form method="post" action="/api/home">
+        <input id="user-input" type="text" placeholder="Type a message...">
+        <button id="send-button">Send</button>
+        <div id="message-container"></div>
+    </form>
+    
 
     <script>
         document.getElementById('send-button').addEventListener('click', function() {

@@ -25,7 +25,7 @@ def get_news(topic):
     news_api_key = os.getenv("NEWS_API_KEY")
 
     url = (
-        f"https://newsapi.org/v2/everything?q={topic}&apiKey={news_api_key}&pageSize=3"
+        f"https://newsapi.org/v2/everything?q={topic}&apiKey={news_api_key}&pageSize=1"
     )
     try:
         response = requests.get(url)
@@ -51,13 +51,7 @@ def get_news(topic):
                 description = article["description"]
                 url = article["url"]
                 content = article["content"]
-                title_descrition = f"""
-                    Title: {title},
-                    Author: {author},
-                    Source: {source_name},
-                    Description: {description},
-                    URL: {url}
-                 """
+                title_descrition = f"{title} by {author} from {source_name}. Abstract {description}, more: {url}"
                 final_news.append(title_descrition)
                 final_news_string = ','.join(str(x) for x in final_news)
             return final_news_string
@@ -76,75 +70,75 @@ def index():
     return render_template("index.html")
 
 # /api/home
-@app.route("/api/home", methods=["POST","GET"])
+@app.route("/get", methods=["GET", "POST"])
 def main():
-    if request.method == 'POST':
-        # Get user input to variable user_input
-        user_input = str(request.form["user-input"])
-        
-        # Retrieve the assistant ID
-        assistant = client.beta.assistants.retrieve(
-            assistant_id=assistant_id
-            )
+   
+    # Get user input to variable user_input
+    msg = request.form["msg"]
+    user_input = str(msg)
+    print(user_input)
 
-        # Create a thread
-        thread = client.beta.threads.create()
-
-        # Promt the model to tell us all about the data provided
-        run = client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant.id,
-
-            instructions=user_input, # user-input from UI 
+    # Retrieve the assistant ID
+    assistant = client.beta.assistants.retrieve(
+        assistant_id=assistant_id
         )
 
-        # Wait until the job is completed
-        time.sleep(10)
-        run = client.beta.threads.runs.retrieve(
-            thread_id=thread.id, 
-            run_id=run.id
-            )
+    # Create a thread
+    thread = client.beta.threads.create()
 
-        # Function for getting information after calling function tools
-        def get_outputs_for_tool_call(tool_call):
-            topic = json.loads(tool_call.function.arguments)["topic"]
-            print(f"The TOPIC is :{topic}")
-            news = get_news(topic=topic)
-            return {
-                "tool_call_id": tool_call.id,
-                "output": news
-            }
+    # Promt the model to tell us all about the data provided
+    run = client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id=assistant.id,
 
-        tool_calls = run.required_action.submit_tool_outputs.tool_calls
-        tool_outputs = map(get_outputs_for_tool_call, tool_calls)
-        tool_outputs = list(tool_outputs)
-        print(f"tool_outputs results:{tool_outputs}")
+        instructions=user_input, # user-input from UI 
+    )
 
-        # Submit information to the chatbot
-        run = client.beta.threads.runs.submit_tool_outputs(
-            thread_id=thread.id,
-            run_id=run.id,
-            tool_outputs=tool_outputs
+    # Wait until the job is completed
+    time.sleep(5)
+    run = client.beta.threads.runs.retrieve(
+        thread_id=thread.id, 
+        run_id=run.id
         )
-        
-        # Wait for the chatbot to process the message
-        time.sleep(15)
-        run = client.beta.threads.runs.retrieve(
-            thread_id=thread.id, 
-            run_id=run.id
-            )
-        print(run)
 
-        message = client.beta.threads.messages.list(
-            thread_id=thread.id
-            )
-        
-        final_output = message.data[0].content[0].text.value
-        return jsonify ({
-            "message":final_output
-            })
+    # Function for getting information after calling function tools
+    def get_outputs_for_tool_call(tool_call):
+        topic = json.loads(tool_call.function.arguments)["topic"]
+        print(f"The TOPIC is :{topic}")
+        news = get_news(topic=topic)
+        return {
+            "tool_call_id": tool_call.id,
+            "output": news
+        }
+
+    tool_calls = run.required_action.submit_tool_outputs.tool_calls
+    tool_outputs = map(get_outputs_for_tool_call, tool_calls)
+    tool_outputs = list(tool_outputs)
+    print(f"tool_outputs results:{tool_outputs}")
+
+    # Submit information to the chatbot
+    run = client.beta.threads.runs.submit_tool_outputs(
+        thread_id=thread.id,
+        run_id=run.id,
+        tool_outputs=tool_outputs
+    )
+    
+    # Wait for the chatbot to process the message
+    time.sleep(5)
+    run = client.beta.threads.runs.retrieve(
+        thread_id=thread.id, 
+        run_id=run.id
+        )
+    print(run)
+
+    message = client.beta.threads.messages.list(
+        thread_id=thread.id
+        )
+    
+    final_output = message.data[0].content[0].text.value
+    return final_output
 
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    app.run(debug=True)
